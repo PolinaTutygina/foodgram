@@ -1,10 +1,15 @@
 from rest_framework import generics, views, status
+from rest_framework.generics import RetrieveAPIView
 from django.db.models import Sum
+from django.db import IntegrityError
+from django.shortcuts import get_object_or_404
+from django.conf import settings
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import (Ingredient, Recipe, FavoriteRecipe, Tag, ShoppingCart)
+from .models import (Ingredient, Recipe, FavoriteRecipe, Tag, ShoppingCart,
+                     RecipeIngredient)
 from .serializers import (IngredientSerializer, RecipeSerializer,
                           CreateRecipeSerializer, TagSerializer,
                           ShoppingCartSerializer, )
@@ -20,6 +25,12 @@ class IngredientListView(generics.ListAPIView):
     serializer_class = IngredientSerializer
 
 
+class IngredientDetailView(RetrieveAPIView):
+    queryset = Ingredient.objects.all()
+    serializer_class = IngredientSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+
 class RecipeListView(generics.ListCreateAPIView):
     queryset = Recipe.objects.all()
     permission_classes = [IsAuthenticatedOrReadOnly]
@@ -31,11 +42,22 @@ class RecipeListView(generics.ListCreateAPIView):
             return CreateRecipeSerializer
         return RecipeSerializer
 
-    def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+
+        is_favorited = self.request.query_params.get('is_favorited')
+        if is_favorited == '1' and user.is_authenticated:
+            queryset = queryset.filter(favorited_by__user=user)
+
+        is_in_shopping_cart = self.request.query_params.get('is_in_shopping_cart')
+        if is_in_shopping_cart == '1' and user.is_authenticated:
+            queryset = queryset.filter(in_cart__user=user)
+
+        return queryset
 
 
-class RecipeDetailView(generics.RetrieveUpdateDestroyAPIView):
+class RecipeDetailView(RetrieveAPIView):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
@@ -112,3 +134,23 @@ class ShoppingListDownloadView(views.APIView):
         )
         response['Content-Disposition'] = 'attachment; filename="shopping_list.txt"'
         return response
+
+
+class RecipeShortLinkView(views.APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, recipe_id):
+        recipe = get_object_or_404(Recipe, id=recipe_id)
+        short_link = f"{settings.SITE_DOMAIN}/recipes/{recipe_id}/"
+        return Response({"short_link": short_link}, status=status.HTTP_200_OK)
+
+
+class RecipeDeleteView(views.APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, recipe_id):
+        recipe = get_object_or_404(Recipe, id=recipe_id)
+        if recipe.author != request.user:
+            return Response({"detail": "Вы не можете удалить чужой рецепт."}, status=status.HTTP_403_FORBIDDEN)
+        recipe.delete()
+        return Response({"detail": "Рецепт успешно удалён."}, status=status.HTTP_204_NO_CONTENT)

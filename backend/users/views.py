@@ -100,3 +100,15 @@ class SubscriptionsListView(generics.ListAPIView):
 
     def get_queryset(self):
         return self.request.user.subscriptions.all()
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        limit = request.query_params.get('recipes_limit')
+        if limit and limit.isdigit():
+            queryset = queryset[:int(limit)]
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)

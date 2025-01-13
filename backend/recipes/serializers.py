@@ -55,6 +55,16 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
 
         recipe.tags.set(tags_data)
         return recipe
+    
+    def validate_ingredients(self, value):
+        if len(value) == 0:
+            raise serializers.ValidationError("Рецепт должен содержать хотя бы один ингредиент.")
+        return value
+
+    def validate_cooking_time(self, value):
+        if value < 1:
+            raise serializers.ValidationError("Время приготовления должно быть не меньше 1 минуты.")
+        return value
 
 
 class ShoppingCartSerializer(serializers.ModelSerializer):
