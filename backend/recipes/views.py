@@ -1,12 +1,17 @@
 from rest_framework import generics, views, status
 from rest_framework.generics import RetrieveAPIView
+from rest_framework.views import APIView
+from io import BytesIO
+from django.http import HttpResponse
 from django.db.models import Sum
-from django.db import IntegrityError
 from django.shortcuts import get_object_or_404
+from rest_framework.pagination import PageNumberPagination
+from django.db import IntegrityError
 from django.conf import settings
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter
 
 from .models import (Ingredient, Recipe, FavoriteRecipe, Tag, ShoppingCart,
                      RecipeIngredient)
@@ -23,6 +28,14 @@ class TagListView(generics.ListAPIView):
 class IngredientListView(generics.ListAPIView):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        name = self.request.query_params.get('name')
+        if name:
+            queryset = queryset.filter(name__istartswith=name)
+        return queryset
 
 
 class IngredientDetailView(RetrieveAPIView):
@@ -31,79 +44,156 @@ class IngredientDetailView(RetrieveAPIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
 
-class RecipeListView(generics.ListCreateAPIView):
-    queryset = Recipe.objects.all()
-    permission_classes = [IsAuthenticatedOrReadOnly]
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['tags', 'author']
-
-    def get_serializer_class(self):
-        if self.request.method == 'POST':
-            return CreateRecipeSerializer
-        return RecipeSerializer
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        user = self.request.user
-
-        is_favorited = self.request.query_params.get('is_favorited')
-        if is_favorited == '1' and user.is_authenticated:
-            queryset = queryset.filter(favorited_by__user=user)
-
-        is_in_shopping_cart = self.request.query_params.get('is_in_shopping_cart')
-        if is_in_shopping_cart == '1' and user.is_authenticated:
-            queryset = queryset.filter(in_cart__user=user)
-
-        return queryset
-
-
-class RecipeDetailView(RetrieveAPIView):
-    queryset = Recipe.objects.all()
-    serializer_class = RecipeSerializer
+class RecipeListView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    def get(self, request):
+        recipes = Recipe.objects.all()
 
-class FavoriteRecipeView(views.APIView):
+        author = request.query_params.get('author')
+        is_favorited = request.query_params.get('is_favorited')
+        is_in_shopping_cart = request.query_params.get('is_in_shopping_cart')
+        search_name = request.query_params.get('search')
+
+        if author:
+            recipes = recipes.filter(author_id=author)
+        if is_favorited:
+            recipes = recipes.filter(favorite_recipes__user=request.user)
+        if is_in_shopping_cart:
+            recipes = recipes.filter(shopping_cart__user=request.user)
+        if search_name:
+            recipes = recipes.filter(name__icontains=search_name)
+
+        paginator = PageNumberPagination()
+        paginated_recipes = paginator.paginate_queryset(recipes, request)
+        serializer = RecipeSerializer(paginated_recipes, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
+    def post(self, request):
+        serializer = CreateRecipeSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(author=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class RecipeDetailView(APIView):
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get(self, request, pk):
+        recipe = get_object_or_404(Recipe, pk=pk)
+        serializer = RecipeSerializer(recipe)
+        return Response(serializer.data)
+    
+    def patch(self, request, id):
+        recipe = get_object_or_404(Recipe, pk=id)
+
+        if recipe.author != request.user:
+            return Response(
+                {"detail": "У вас недостаточно прав для выполнения данного действия."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = CreateRecipeSerializer(recipe, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, pk):
+        recipe = get_object_or_404(Recipe, pk=pk)
+
+        if recipe.author != request.user:
+            return Response(
+                {'detail': 'У вас нет прав на изменение этого рецепта.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = CreateRecipeSerializer(recipe, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        recipe = get_object_or_404(Recipe, pk=pk)
+
+        if recipe.author != request.user:
+            return Response(
+                {'detail': 'У вас нет прав на удаление этого рецепта.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        recipe.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class FavoriteRecipeView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, recipe_id):
-        try:
-            recipe = Recipe.objects.get(id=recipe_id)
-            FavoriteRecipe.objects.create(user=request.user, recipe=recipe)
-            return Response({"detail": "Рецепт добавлен в избранное."}, status=status.HTTP_201_CREATED)
-        except Recipe.DoesNotExist:
-            return Response({"detail": "Рецепт не найден."}, status=status.HTTP_404_NOT_FOUND)
+    def post(self, request, id):
+        recipe = get_object_or_404(Recipe, pk=id)
+        if FavoriteRecipe.objects.filter(user=request.user, recipe=recipe).exists():
+            return Response(
+                {"detail": "Рецепт уже находится в избранном."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        FavoriteRecipe.objects.create(user=request.user, recipe=recipe)
+        data = {
+            "id": recipe.id,
+            "name": recipe.name,
+            "image": request.build_absolute_uri(recipe.image.url),
+            "cooking_time": recipe.cooking_time,
+        }
+        return Response(data, status=status.HTTP_201_CREATED)
 
-    def delete(self, request, recipe_id):
-        try:
-            favorite = FavoriteRecipe.objects.get(user=request.user, recipe_id=recipe_id)
-            favorite.delete()
-            return Response({"detail": "Рецепт удален из избранного."}, status=status.HTTP_204_NO_CONTENT)
-        except FavoriteRecipe.DoesNotExist:
-            return Response({"detail": "Рецепт не найден в избранном."}, status=status.HTTP_404_NOT_FOUND)
+    def delete(self, request, id):
+        recipe = get_object_or_404(Recipe, pk=id)
+        favorite = FavoriteRecipe.objects.filter(user=request.user, recipe=recipe).first()
+        if not favorite:
+            return Response(
+                {"detail": "Рецепт отсутствует в избранном."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        favorite.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class ShoppingCartView(views.APIView):
+class ShoppingCartView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, recipe_id):
-        try:
-            recipe = Recipe.objects.get(id=recipe_id)
-            ShoppingCart.objects.create(user=request.user, recipe=recipe)
-            return Response({"detail": "Рецепт добавлен в корзину."}, status=status.HTTP_201_CREATED)
-        except Recipe.DoesNotExist:
-            return Response({"detail": "Рецепт не найден."}, status=status.HTTP_404_NOT_FOUND)
-        except IntegrityError:
-            return Response({"detail": "Рецепт уже в корзине."}, status=status.HTTP_400_BAD_REQUEST)
+    def post(self, request, id):
+        recipe = get_object_or_404(Recipe, pk=id)
 
-    def delete(self, request, recipe_id):
-        try:
-            cart_item = ShoppingCart.objects.get(user=request.user, recipe_id=recipe_id)
-            cart_item.delete()
-            return Response({"detail": "Рецепт удален из корзины."}, status=status.HTTP_204_NO_CONTENT)
-        except ShoppingCart.DoesNotExist:
-            return Response({"detail": "Рецепт не найден в корзине."}, status=status.HTTP_404_NOT_FOUND)
+        if ShoppingCart.objects.filter(user=request.user, recipe=recipe).exists():
+            return Response(
+                {"detail": "Рецепт уже находится в списке покупок."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
+        ShoppingCart.objects.create(user=request.user, recipe=recipe)
+        data = {
+            "id": recipe.id,
+            "name": recipe.name,
+            "image": request.build_absolute_uri(recipe.image.url),
+            "cooking_time": recipe.cooking_time,
+        }
+        return Response(data, status=status.HTTP_201_CREATED)
+
+    def delete(self, request, id):
+        recipe = get_object_or_404(Recipe, pk=id)
+        cart_item = ShoppingCart.objects.filter(user=request.user, recipe=recipe).first()
+
+        if not cart_item:
+            return Response(
+                {"detail": "Рецепт отсутствует в списке покупок."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        cart_item.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
 
 class ShoppingCartListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
@@ -113,28 +203,30 @@ class ShoppingCartListView(generics.ListAPIView):
         return ShoppingCart.objects.filter(user=self.request.user)
 
 
-class ShoppingListDownloadView(views.APIView):
+class ShoppingListDownloadView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        shopping_list = RecipeIngredient.objects.filter(
-            recipe__in=request.user.shopping_cart.values_list('recipe', flat=True)
-        ).values(
-            'ingredient__name', 'ingredient__measurement_unit'
-        ).annotate(total_amount=Sum('amount'))
+        shopping_cart = ShoppingCart.objects.filter(user=request.user)
+        if not shopping_cart.exists():
+            return Response(
+                {"detail": "Список покупок пуст."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        lines = [
-            f"{item['ingredient__name']} ({item['ingredient__measurement_unit']}): {item['total_amount']}"
-            for item in shopping_list
-        ]
-        response = Response(
-            "\n".join(lines),
-            content_type='text/plain',
-            status=status.HTTP_200_OK
-        )
-        response['Content-Disposition'] = 'attachment; filename="shopping_list.txt"'
+        shopping_list = "Список покупок:\n\n"
+        for item in shopping_cart:
+            recipe = item.recipe
+            shopping_list += f"- {recipe.name} (время приготовления: {recipe.cooking_time} мин.)\n"
+
+        buffer = BytesIO()
+        buffer.write(shopping_list.encode('utf-8'))
+        buffer.seek(0)
+
+        response = HttpResponse(buffer, content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="shopping_list.pdf"'
         return response
-
+    
 
 class RecipeShortLinkView(views.APIView):
     permission_classes = [IsAuthenticated]
