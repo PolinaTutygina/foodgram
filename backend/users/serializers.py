@@ -1,33 +1,35 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from recipes.serializers import RecipeSerializer
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
+    is_subscribed = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'avatar']
+        fields = [
+            'id', 'email', 'username', 'first_name', 'last_name', 
+            'avatar', 'is_subscribed'
+        ]
+
+    def get_is_subscribed(self, obj):
+        request = self.context.get('request')
+        if request is None or request.user.is_anonymous:
+            return False
+        return obj.subscribers.filter(id=request.user.id).exists()
 
 
-class RegisterSerializer(serializers.ModelSerializer):
+class RegisterUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'first_name', 'last_name']
-        extra_kwargs = {'password': {'write_only': True}}
+        fields = ['email', 'id', 'username', 'first_name', 'last_name']
 
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)
         return user
-
-
-class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    def validate(self, attrs):
-        data = super().validate(attrs)
-        data['username'] = self.user.username
-        return data
 
 
 class AvatarSerializer(serializers.ModelSerializer):
@@ -58,19 +60,16 @@ class PasswordResetSerializer(serializers.Serializer):
         return user
 
 
-class CurrentUserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'avatar', 'is_superuser']
-
-
 class SubscriptionSerializer(serializers.ModelSerializer):
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.IntegerField(source='recipes.count', read_only=True)
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'avatar', 'recipes', 'recipes_count']
+        fields = [
+            'id', 'username', 'first_name', 'last_name', 
+            'avatar', 'recipes', 'recipes_count'
+        ]
 
     def get_recipes(self, obj):
         request = self.context.get('request')
@@ -81,21 +80,21 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         return RecipeSerializer(recipes, many=True).data
 
 
-class SubscribeActionSerializer(serializers.Serializer):
-    user_id = serializers.IntegerField()
+class SubscribeActionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id']
 
-    def validate_user_id(self, value):
+    def validate_id(self, value):
         user = self.context['request'].user
         if value == user.id:
             raise serializers.ValidationError("Нельзя подписаться на самого себя.")
-        try:
-            target_user = User.objects.get(id=value)
-        except User.DoesNotExist:
-            raise serializers.ValidationError("Пользователь с указанным ID не найден.")
-        return target_user
+        if user.subscriptions.filter(id=value).exists():
+            raise serializers.ValidationError("Вы уже подписаны на этого пользователя.")
+        return value
 
     def save(self, **kwargs):
         user = self.context['request'].user
-        target_user = self.validated_data['user_id']
+        target_user = User.objects.get(id=self.validated_data['id'])
         user.subscriptions.add(target_user)
         return target_user
