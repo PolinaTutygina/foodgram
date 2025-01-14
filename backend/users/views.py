@@ -1,6 +1,8 @@
 from rest_framework import views, generics, status, mixins
+from .pagination import CustomPagination
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 from .models import User
 from .permissions import IsGuest, IsAuthenticatedUser, IsAdmin, IsAuthenticatedOrReadOnly
 from .serializers import (
@@ -11,6 +13,8 @@ from .serializers import (
 
 class UserViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericAPIView):
     queryset = User.objects.all()
+    serializer_class = UserSerializer
+    pagination_class = CustomPagination
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -21,12 +25,23 @@ class UserViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, generics.Gener
         if self.request.method == 'POST':
             return [IsGuest()]
         return [IsAuthenticatedOrReadOnly()]
-
+    
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
-        return self.create(request, *args, **kwargs)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        response_data = {
+            'id': user.id,
+            'email': user.email,
+            'username': user.username,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+        }
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 
 class UserDetailView(generics.RetrieveAPIView):
@@ -44,9 +59,12 @@ class CurrentUserView(views.APIView):
 
 
 class AvatarUpdateView(views.APIView):
-    permission_classes = [IsAuthenticatedUser]
+    permission_classes = [IsAuthenticated]
 
     def put(self, request):
+        if 'avatar' not in request.data:
+            raise ValidationError({"avatar": "Поле 'avatar' обязательно."})
+
         serializer = AvatarSerializer(request.user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -84,6 +102,7 @@ class SubscribeView(views.APIView):
 class SubscriptionsListView(generics.ListAPIView):
     permission_classes = [IsAuthenticatedUser]
     serializer_class = SubscriptionSerializer
+    pagination_class = CustomPagination
 
     def get_queryset(self):
         return self.request.user.subscriptions.all()

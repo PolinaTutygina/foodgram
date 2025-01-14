@@ -1,6 +1,7 @@
 import base64
 from django.core.files.base import ContentFile
 from rest_framework import serializers
+from django.core.validators import RegexValidator
 from .models import User
 from recipes.serializers import RecipeSerializer
 
@@ -16,11 +17,16 @@ class Base64ImageField(serializers.ImageField):
 
 
 class AvatarSerializer(serializers.ModelSerializer):
-    avatar = Base64ImageField(required=False, allow_null=True)
+    avatar = Base64ImageField(required=True)
 
     class Meta:
         model = User
         fields = ['avatar']
+
+    def validate_avatar(self, value):
+        if not value:
+            raise serializers.ValidationError("Поле 'avatar' обязательно.")
+        return value
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -51,10 +57,46 @@ class UserSerializer(serializers.ModelSerializer):
         return instance
 
 
+username_validator = RegexValidator(
+    regex=r'^[a-zA-Z0-9@.+-_]+$',
+    message="Имя пользователя может содержать только буквы, цифры и символы @/./+/-/_"
+)
+
+
 class RegisterUserSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(required=True, allow_blank=False)
+    username = serializers.CharField(
+        required=True,
+        allow_blank=False,
+        max_length=150,
+        validators=[username_validator]
+    )
+    first_name = serializers.CharField(required=True, allow_blank=False, max_length=150)
+    last_name = serializers.CharField(required=True, allow_blank=False, max_length=150)
+    password = serializers.CharField(write_only=True, required=True, allow_blank=False)
+
     class Meta:
         model = User
-        fields = ['email', 'id', 'username', 'first_name', 'last_name']
+        fields = ('id', 'email', 'username', 'first_name', 'last_name', 'password')
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
+
+    def validate(self, attrs):
+        for field, value in attrs.items():
+            if isinstance(value, str) and value.strip() == "":
+                raise serializers.ValidationError({field: "Это поле не может быть пустым."})
+        return attrs
+    
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Этот email уже используется.")
+        return value
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Этот username уже используется.")
+        return value
 
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)
