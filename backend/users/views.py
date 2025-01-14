@@ -1,19 +1,16 @@
 from rest_framework import views, generics, status, mixins
-from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
-from django.contrib.auth import get_user_model
+from .models import User
+from .permissions import IsGuest, IsAuthenticatedUser, IsAdmin, IsAuthenticatedOrReadOnly
 from .serializers import (
     UserSerializer, RegisterUserSerializer, AvatarSerializer, 
     PasswordResetSerializer, SubscriptionSerializer, SubscribeActionSerializer
 )
 
-User = get_user_model()
-
 
 class UserViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericAPIView):
     queryset = User.objects.all()
-    permission_classes = [AllowAny]
-    serializer_class = UserSerializer
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -22,7 +19,7 @@ class UserViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, generics.Gener
 
     def get_permissions(self):
         if self.request.method == 'POST':
-            return [AllowAny()]
+            return [IsGuest()]
         return [IsAuthenticatedOrReadOnly()]
 
     def get(self, request, *args, **kwargs):
@@ -35,10 +32,11 @@ class UserViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, generics.Gener
 class UserDetailView(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
 
 class CurrentUserView(views.APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedUser]
 
     def get(self, request):
         serializer = UserSerializer(request.user)
@@ -46,7 +44,7 @@ class CurrentUserView(views.APIView):
 
 
 class AvatarUpdateView(views.APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedUser]
 
     def put(self, request):
         serializer = AvatarSerializer(request.user, data=request.data, partial=True)
@@ -62,7 +60,7 @@ class AvatarUpdateView(views.APIView):
 
 
 class PasswordResetView(views.APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedUser]
 
     def post(self, request):
         serializer = PasswordResetSerializer(data=request.data, context={'request': request})
@@ -73,7 +71,7 @@ class PasswordResetView(views.APIView):
 
 
 class SubscribeView(views.APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedUser]
 
     def post(self, request):
         serializer = SubscribeActionSerializer(data=request.data, context={'request': request})
@@ -84,7 +82,7 @@ class SubscribeView(views.APIView):
 
 
 class SubscriptionsListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedUser]
     serializer_class = SubscriptionSerializer
 
     def get_queryset(self):

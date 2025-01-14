@@ -1,17 +1,36 @@
+import base64
+from django.core.files.base import ContentFile
 from rest_framework import serializers
-from django.contrib.auth import get_user_model
+from .models import User
 from recipes.serializers import RecipeSerializer
 
-User = get_user_model()
+
+class Base64ImageField(serializers.ImageField):
+    def to_internal_value(self, data):
+        if isinstance(data, str) and data.startswith('data:image'):
+            format, imgstr = data.split(';base64,')
+            ext = format.split('/')[-1]
+            data = ContentFile(base64.b64decode(imgstr), name='temp.' + ext)
+
+        return super().to_internal_value(data)
+
+
+class AvatarSerializer(serializers.ModelSerializer):
+    avatar = Base64ImageField(required=False, allow_null=True)
+
+    class Meta:
+        model = User
+        fields = ['avatar']
 
 
 class UserSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.SerializerMethodField()
+    avatar = Base64ImageField(required=False, allow_null=True)
 
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'username', 'first_name', 'last_name', 
+            'id', 'email', 'username', 'first_name', 'last_name',
             'avatar', 'is_subscribed'
         ]
 
@@ -30,12 +49,6 @@ class RegisterUserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)
         return user
-
-
-class AvatarSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['avatar']
 
 
 class PasswordResetSerializer(serializers.Serializer):

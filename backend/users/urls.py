@@ -1,4 +1,4 @@
-from django.urls import path, include
+from django.urls import path
 from .views import (
     UserViewSet, UserDetailView, 
     CurrentUserView, AvatarUpdateView, PasswordResetView, 
@@ -7,8 +7,6 @@ from .views import (
 
 
 urlpatterns = [
-    #path('', UserListView.as_view(), name='user_list'),
-    #path('', RegisterUserView.as_view(), name='register_user'),
     path('', UserViewSet.as_view(), name='users'),
     path('me/', CurrentUserView.as_view(), name='current_user'),
     path('me/avatar/', AvatarUpdateView.as_view(), name='update_avatar'),
