@@ -40,6 +40,16 @@ class UserSerializer(serializers.ModelSerializer):
             return False
         return obj.subscribers.filter(id=request.user.id).exists()
 
+    def update(self, instance, validated_data):
+        instance.email = validated_data.get('email', instance.email)
+        instance.username = validated_data.get('username', instance.username)
+        instance.first_name = validated_data.get('first_name', instance.first_name)
+        instance.last_name = validated_data.get('last_name', instance.last_name)
+        instance.avatar = validated_data.get('avatar', instance.avatar)
+
+        instance.save()
+        return instance
+
 
 class RegisterUserSerializer(serializers.ModelSerializer):
     class Meta:
