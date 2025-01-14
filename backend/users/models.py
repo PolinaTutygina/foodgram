@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.db import models
+from django.conf import settings
 
 
 class User(AbstractUser):
@@ -20,3 +21,24 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+
+class Subscription(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="following",
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="followers",
+    )
+
+    class Meta:
+        unique_together = ('user', 'author')
+        verbose_name = "Подписка"
+        verbose_name_plural = "Подписки"
+
+    def __str__(self):
+        return f"{self.user} подписан на {self.author}"

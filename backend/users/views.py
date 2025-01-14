@@ -1,13 +1,17 @@
+from rest_framework.views import APIView
 from rest_framework import views, generics, status, mixins
 from .pagination import CustomPagination
+from django.shortcuts import get_object_or_404
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
-from .models import User
+from .models import User, Subscription
+from recipes.models import Recipe
 from .permissions import IsGuest, IsAuthenticatedUser, IsAdmin, IsAuthenticatedOrReadOnly
 from .serializers import (
     UserSerializer, RegisterUserSerializer, AvatarSerializer, 
-    PasswordResetSerializer, SubscriptionSerializer, SubscribeActionSerializer
+    PasswordResetSerializer, SubscriptionSerializer
 )
 
 
@@ -88,21 +92,55 @@ class PasswordResetView(views.APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class SubscribeView(views.APIView):
-    permission_classes = [IsAuthenticatedUser]
+class SubscriptionListView(APIView):
+    permission_classes = [IsAuthenticated]
 
-    def post(self, request):
-        serializer = SubscribeActionSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            target_user = serializer.save()
-            return Response({"detail": f"Вы подписались на {target_user.username}."}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def get(self, request):
+        subscriptions = Subscription.objects.filter(user=request.user)
+        paginator = PageNumberPagination()
+        paginator.page_size = request.query_params.get("limit", 10)
+        paginated_subscriptions = paginator.paginate_queryset(subscriptions, request)
+
+        results = [
+            SubscriptionSerializer(subscription, context={"request": request}).data
+            for subscription in paginated_subscriptions
+        ]
+        return paginator.get_paginated_response(results)
 
 
-class SubscriptionsListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticatedUser]
-    serializer_class = SubscriptionSerializer
-    pagination_class = CustomPagination
+class SubscribeView(APIView):
+    permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        return self.request.user.subscriptions.all()
+    def post(self, request, id):
+        author = get_object_or_404(User, pk=id)
+
+        if author == request.user:
+            return Response(
+                {"detail": "Нельзя подписаться на самого себя."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if Subscription.objects.filter(user=request.user, author=author).exists():
+            return Response(
+                {"detail": "Вы уже подписаны на этого пользователя."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        subscription = Subscription.objects.create(user=request.user, author=author)
+        return Response(
+            SubscriptionSerializer(subscription, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    def delete(self, request, id):
+        author = get_object_or_404(User, pk=id)
+        subscription = Subscription.objects.filter(user=request.user, author=author).first()
+
+        if not subscription:
+            return Response(
+                {"detail": "Вы не подписаны на этого пользователя."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        subscription.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
