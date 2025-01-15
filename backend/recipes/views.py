@@ -2,6 +2,7 @@ from rest_framework import generics, views, status
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.views import APIView
 from io import BytesIO
+from rest_framework.generics import ListAPIView
 from django.http import HttpResponse
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404
@@ -25,10 +26,12 @@ class TagListView(generics.ListAPIView):
     serializer_class = TagSerializer
 
 
-class IngredientListView(generics.ListAPIView):
+class IngredientListView(ListAPIView):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['name']
+    http_method_names = ['get']
 
     def get_queryset(self):
         queryset = super().get_queryset()

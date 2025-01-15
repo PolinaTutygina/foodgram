@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.core.files.base import ContentFile
 import base64
+from .utils import resolve_placeholders
 from .models import (Ingredient, Recipe, RecipeIngredient, Tag, ShoppingCart)
 
 
@@ -56,7 +57,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = '__all__'
-
+  
 
 class CreateRecipeSerializer(serializers.ModelSerializer):
     ingredients = RecipeIngredientSerializer(many=True)
@@ -76,6 +77,10 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
                 amount=ingredient_data['amount']
             )
         return recipe
+    
+    def validate(self, data):
+        data = resolve_placeholders(data)
+        return super().validate(data)
     
     def validate_ingredients(self, value):
         if len(value) == 0:
