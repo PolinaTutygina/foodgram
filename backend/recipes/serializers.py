@@ -65,7 +65,7 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = ('ingredients', 'image', 'name', 'text', 'cooking_time')
+        fields = ('ingredients', 'image', 'title', 'description', 'cooking_time')
 
     def create(self, validated_data):
         ingredients_data = validated_data.pop('ingredients')
@@ -77,13 +77,13 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
                 amount=ingredient_data['amount']
             )
         return recipe
-    
+
     def validate(self, data):
         data = resolve_placeholders(data)
         return super().validate(data)
-    
+
     def validate_ingredients(self, value):
-        if len(value) == 0:
+        if not value:
             raise serializers.ValidationError("Рецепт должен содержать хотя бы один ингредиент.")
         return value
 
