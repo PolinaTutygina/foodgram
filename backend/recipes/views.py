@@ -240,7 +240,7 @@ class RecipeShortLinkView(views.APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, recipe_id):
-        recipe = get_object_or_404(Recipe, id=recipe_id)
+        get_object_or_404(Recipe, id=recipe_id)
         short_link = f"{settings.SITE_DOMAIN}/recipes/{recipe_id}/"
         return Response({"short_link": short_link}, status=status.HTTP_200_OK)
 
