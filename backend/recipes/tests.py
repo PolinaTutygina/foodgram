@@ -1,13 +1,20 @@
 from django.test import TestCase
-from recipes.models import Recipe, Ingredient, Tag, RecipeIngredient
+from recipes.models import (Recipe, Ingredient, Tag,
+                            RecipeIngredient)
 from users.models import User
 
 
 class RecipeModelTest(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="chef", password="pass123")
-        self.ingredient = Ingredient.objects.create(name="Sugar", measurement_unit="grams")
-        self.tag = Tag.objects.create(name="Dessert", color="#FFFFFF", slug="dessert")
+        self.user = User.objects.create_user(
+            username="chef", password="pass123"
+        )
+        self.ingredient = Ingredient.objects.create(
+            name="Sugar", measurement_unit="grams"
+        )
+        self.tag = Tag.objects.create(
+            name="Dessert", color="#FFFFFF", slug="dessert"
+        )
         self.recipe = Recipe.objects.create(
             author=self.user,
             title="Cake",
@@ -26,9 +33,18 @@ class RecipeModelTest(TestCase):
 
     def test_ingredient_association(self):
         """Тест связи рецепта с ингредиентом."""
-        self.assertTrue(self.recipe.ingredients.filter(name="Sugar").exists())
+        self.assertTrue(
+            self.recipe.ingredients.filter(
+                name="Sugar"
+            ).exists()
+        )
 
     def test_tag_association(self):
         """Тест связи рецепта с тегом."""
-        self.assertTrue(self.recipe.tags.filter(name="Dessert").exists())
+        self.assertTrue(
+            self.recipe.tags.filter(
+                name="Dessert"
+            ).exists()
+        )
+
 
