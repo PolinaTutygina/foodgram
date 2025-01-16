@@ -4,18 +4,15 @@ from rest_framework.views import APIView
 from io import BytesIO
 from rest_framework.generics import ListAPIView
 from django.http import HttpResponse
-from django.db.models import Sum
 from django.shortcuts import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
-from django.db import IntegrityError
 from django.conf import settings
-from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
+from rest_framework.permissions import (IsAuthenticatedOrReadOnly,
+                                        IsAuthenticated)
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter
 
-from .models import (Ingredient, Recipe, FavoriteRecipe, Tag, ShoppingCart,
-                     RecipeIngredient)
+from .models import (Ingredient, Recipe, FavoriteRecipe, Tag, ShoppingCart)
 from .serializers import (IngredientSerializer, RecipeSerializer,
                           CreateRecipeSerializer, TagSerializer,
                           ShoppingCartSerializer, )
@@ -87,17 +84,18 @@ class RecipeDetailView(APIView):
         recipe = get_object_or_404(Recipe, pk=pk)
         serializer = RecipeSerializer(recipe)
         return Response(serializer.data)
-    
+
     def patch(self, request, id):
         recipe = get_object_or_404(Recipe, pk=id)
 
         if recipe.author != request.user:
             return Response(
-                {"detail": "У вас недостаточно прав для выполнения данного действия."},
+                {"detail": "У вас недостаточно прав для выполнения действия."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        serializer = CreateRecipeSerializer(recipe, data=request.data, partial=True)
+        serializer = CreateRecipeSerializer(
+            recipe, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -153,7 +151,8 @@ class FavoriteRecipeView(APIView):
 
     def delete(self, request, id):
         recipe = get_object_or_404(Recipe, pk=id)
-        favorite = FavoriteRecipe.objects.filter(user=request.user, recipe=recipe).first()
+        favorite = FavoriteRecipe.objects.filter(
+            user=request.user, recipe=recipe).first()
         if not favorite:
             return Response(
                 {"detail": "Рецепт отсутствует в избранном."},
@@ -186,7 +185,8 @@ class ShoppingCartView(APIView):
 
     def delete(self, request, id):
         recipe = get_object_or_404(Recipe, pk=id)
-        cart_item = ShoppingCart.objects.filter(user=request.user, recipe=recipe).first()
+        cart_item = ShoppingCart.objects.filter(
+            user=request.user, recipe=recipe).first()
 
         if not cart_item:
             return Response(
@@ -196,7 +196,7 @@ class ShoppingCartView(APIView):
 
         cart_item.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-    
+
 
 class ShoppingCartListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
@@ -220,16 +220,21 @@ class ShoppingListDownloadView(APIView):
         shopping_list = "Список покупок:\n\n"
         for item in shopping_cart:
             recipe = item.recipe
-            shopping_list += f"- {recipe.name} (время приготовления: {recipe.cooking_time} мин.)\n"
+            shopping_list += (
+                f"- {recipe.name} (время приготовления: "
+                f"{recipe.cooking_time} мин.)\n"
+            )
 
         buffer = BytesIO()
         buffer.write(shopping_list.encode('utf-8'))
         buffer.seek(0)
 
         response = HttpResponse(buffer, content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="shopping_list.pdf"'
+        response['Content-Disposition'] = (
+            'attachment; filename="shopping_list.pdf"'
+        )
         return response
-    
+
 
 class RecipeShortLinkView(views.APIView):
     permission_classes = [IsAuthenticated]
@@ -246,6 +251,12 @@ class RecipeDeleteView(views.APIView):
     def delete(self, request, recipe_id):
         recipe = get_object_or_404(Recipe, id=recipe_id)
         if recipe.author != request.user:
-            return Response({"detail": "Вы не можете удалить чужой рецепт."}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"detail": "Вы не можете удалить чужой рецепт."},
+                status=status.HTTP_403_FORBIDDEN
+            )
         recipe.delete()
-        return Response({"detail": "Рецепт успешно удалён."}, status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            {"detail": "Рецепт успешно удалён."},
+            status=status.HTTP_204_NO_CONTENT
+        )

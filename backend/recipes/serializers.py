@@ -29,8 +29,9 @@ class IngredientSerializer(serializers.ModelSerializer):
 class RecipeIngredientSerializer(serializers.ModelSerializer):
     id = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
     name = serializers.ReadOnlyField(source='ingredient.name')
-    measurement_unit = serializers.ReadOnlyField(source='ingredient.measurement_unit')
-    
+    measurement_unit = serializers.ReadOnlyField(
+        source='ingredient.measurement_unit')
+
     class Meta:
         model = RecipeIngredient
         fields = ('id', 'name', 'measurement_unit', 'amount')
@@ -38,7 +39,8 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
 
 class RecipeSerializer(serializers.ModelSerializer):
     author = serializers.SerializerMethodField()
-    ingredients = RecipeIngredientSerializer(source='recipeingredient_set', many=True)
+    ingredients = RecipeIngredientSerializer(
+        source='recipeingredient_set', many=True)
     image = Base64ImageField()
     is_favorited = serializers.BooleanField(read_only=True)
     is_in_shopping_cart = serializers.BooleanField(read_only=True)
@@ -57,7 +59,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = '__all__'
-  
+
 
 class CreateRecipeSerializer(serializers.ModelSerializer):
     ingredients = RecipeIngredientSerializer(many=True)
@@ -65,7 +67,8 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = ('ingredients', 'image', 'title', 'description', 'cooking_time')
+        fields = ('ingredients', 'image', 'title',
+                  'description', 'cooking_time')
 
     def create(self, validated_data):
         ingredients_data = validated_data.pop('ingredients')
@@ -84,12 +87,14 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
 
     def validate_ingredients(self, value):
         if not value:
-            raise serializers.ValidationError("Рецепт должен содержать хотя бы один ингредиент.")
+            raise serializers.ValidationError(
+                "Рецепт должен содержать хотя бы один ингредиент.")
         return value
 
     def validate_cooking_time(self, value):
         if value < 1:
-            raise serializers.ValidationError("Время приготовления должно быть не меньше 1 минуты.")
+            raise serializers.ValidationError(
+                "Время приготовления должно быть не меньше 1 минуты.")
         return value
 
 

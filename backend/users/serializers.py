@@ -3,7 +3,6 @@ from django.core.files.base import ContentFile
 from rest_framework import serializers
 from django.core.validators import RegexValidator
 from .models import User
-from recipes.serializers import RecipeSerializer
 from .models import Subscription
 from recipes.models import Recipe
 
@@ -51,8 +50,10 @@ class UserSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         instance.email = validated_data.get('email', instance.email)
         instance.username = validated_data.get('username', instance.username)
-        instance.first_name = validated_data.get('first_name', instance.first_name)
-        instance.last_name = validated_data.get('last_name', instance.last_name)
+        instance.first_name = validated_data.get(
+            'first_name', instance.first_name)
+        instance.last_name = validated_data.get(
+            'last_name', instance.last_name)
         instance.avatar = validated_data.get('avatar', instance.avatar)
 
         instance.save()
@@ -61,7 +62,10 @@ class UserSerializer(serializers.ModelSerializer):
 
 username_validator = RegexValidator(
     regex=r'^[a-zA-Z0-9@.+-_]+$',
-    message="Имя пользователя может содержать только буквы, цифры и символы @/./+/-/_"
+    message=(
+        "Имя пользователя может содержать только буквы, "
+        "цифры и символы @/./+/-/_"
+    )
 )
 
 
@@ -73,13 +77,17 @@ class RegisterUserSerializer(serializers.ModelSerializer):
         max_length=150,
         validators=[username_validator]
     )
-    first_name = serializers.CharField(required=True, allow_blank=False, max_length=150)
-    last_name = serializers.CharField(required=True, allow_blank=False, max_length=150)
-    password = serializers.CharField(write_only=True, required=True, allow_blank=False)
+    first_name = serializers.CharField(
+        required=True, allow_blank=False, max_length=150)
+    last_name = serializers.CharField(
+        required=True, allow_blank=False, max_length=150)
+    password = serializers.CharField(
+        write_only=True, required=True, allow_blank=False)
 
     class Meta:
         model = User
-        fields = ('id', 'email', 'username', 'first_name', 'last_name', 'password')
+        fields = ('id', 'email', 'username',
+                  'first_name', 'last_name', 'password')
         extra_kwargs = {
             'password': {'write_only': True}
         }
@@ -87,9 +95,10 @@ class RegisterUserSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         for field, value in attrs.items():
             if isinstance(value, str) and value.strip() == "":
-                raise serializers.ValidationError({field: "Это поле не может быть пустым."})
+                raise serializers.ValidationError(
+                    {field: "Это поле не может быть пустым."})
         return attrs
-    
+
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
             raise serializers.ValidationError("Этот email уже используется.")
@@ -97,7 +106,8 @@ class RegisterUserSerializer(serializers.ModelSerializer):
 
     def validate_username(self, value):
         if User.objects.filter(username=value).exists():
-            raise serializers.ValidationError("Этот username уже используется.")
+            raise serializers.ValidationError(
+                "Этот username уже используется.")
         return value
 
     def create(self, validated_data):
@@ -117,7 +127,8 @@ class PasswordResetSerializer(serializers.Serializer):
 
     def validate_new_password(self, value):
         if len(value) < 8:
-            raise serializers.ValidationError("Пароль должен быть не менее 8 символов.")
+            raise serializers.ValidationError(
+                "Пароль должен быть не менее 8 символов.")
         return value
 
     def save(self, **kwargs):
@@ -142,13 +153,14 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.SerializerMethodField()
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
-    avatar = serializers.ImageField(source="author.profile.avatar", read_only=True)
+    avatar = serializers.ImageField(
+        source="author.profile.avatar", read_only=True)
 
     class Meta:
         model = Subscription
         fields = [
-            'email', 'id', 'username', 'first_name', 'last_name', 'is_subscribed',
-            'recipes', 'recipes_count', 'avatar'
+            'email', 'id', 'username', 'first_name', 'last_name',
+            'is_subscribed', 'recipes', 'recipes_count', 'avatar'
         ]
 
     def get_is_subscribed(self, obj):
@@ -159,7 +171,9 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         recipes = obj.author.recipes.all()
         if limit:
             recipes = recipes[:int(limit)]
-        return RecipeMinifiedSerializer(recipes, many=True, context=self.context).data
+        return RecipeMinifiedSerializer(
+            recipes, many=True, context=self.context
+        ).data
 
     def get_recipes_count(self, obj):
         return obj.author.recipes.count()
