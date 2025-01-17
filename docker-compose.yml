@@ -1,3 +1,5 @@
+version: '3.8'
+
 volumes:
   pg_data:
   static:
@@ -13,14 +15,17 @@ services:
     env_file: .env
     volumes:
       - static:/backend_static
-
+    depends_on:
+      - db
   frontend:
     env_file: .env
     build: ./frontend/
-    command: cp -r /app/build/. /frontend_static/
+    command: sh -c "npm run build && cp -r /app/build/. /frontend_static/"
     volumes:
       - static:/frontend_static
-
+    depends_on:
+      - backend
+      - gateway
   gateway:
     build: ./gateway/
     env_file: .env
@@ -28,3 +33,7 @@ services:
       - static:/staticfiles
     ports:
       - 8000:80
+    depends_on:
+      - backend
+      - db
+
