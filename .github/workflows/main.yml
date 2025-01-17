@@ -99,25 +99,23 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USER }}
           key: ${{ secrets.SSH_KEY }}
-          script: |
-            cd infra/
-            sudo docker-compose stop
-            sudo docker-compose rm backend frontend -f
-            sudo docker image prune -f
-            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/foodgram-backend
-            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/foodgram-frontend
-            
-            # Создаем .env с минимальными переменными
-            cat <<EOF > ~/infra/.env
-            POSTGRES_DB=${{ secrets.POSTGRES_DB }}
-            POSTGRES_USER=${{ secrets.POSTGRES_USER }}
-            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-            DB_HOST=${{ secrets.DB_HOST }}
-            EOF
-            
-            # Запускаем контейнеры
-            sudo docker-compose up -d --build
+        script: |
+          cd infra/
+          sudo docker-compose stop
+          sudo docker-compose rm -f backend frontend gateway
+          
+          sudo docker image prune -f
+          
+          sudo docker pull ${{ secrets.DOCKER_USERNAME }}/foodgram-backend
+          sudo docker pull ${{ secrets.DOCKER_USERNAME }}/foodgram-frontend
+          sudo docker pull ${{ secrets.DOCKER_USERNAME }}/foodgram-gateway
+          
+          cat <<EOF > ~/infra/.env
+          POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          DB_HOST=${{ secrets.DB_HOST }}
+          DB_PORT=${{ secrets.DB_PORT }}
+          EOF
 
-            # Выполняем миграции и сбор статических файлов
-            sudo docker-compose exec -T backend python manage.py migrate
-            sudo docker-compose exec -T backend python manage.py collectstatic --no-input
+          sudo docker-compose up -d --build
