@@ -20,12 +20,16 @@ services:
   frontend:
     env_file: .env
     build: ./frontend/
-    command: sh -c "npm run build && cp -r /app/build/. /frontend_static/"
+    command: >
+      sh -c "cp -r /app/build/. /frontend_static/ && 
+             npx -y http-server -p 8000 /frontend_static"
     volumes:
       - static:/frontend_static
     depends_on:
       - backend
       - gateway
+    ports:
+      - 8000:8000
   gateway:
     build: ./gateway/
     env_file: .env
@@ -36,4 +40,3 @@ services:
     depends_on:
       - backend
       - db
-
