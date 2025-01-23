@@ -90,7 +90,7 @@ class RecipeDetailView(APIView):
 
         if recipe.author != request.user:
             return Response(
-                {"detail": "У вас недостаточно прав для выполнения действия."},
+                {'detail': 'У вас недостаточно прав для выполнения действия.'},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -137,15 +137,15 @@ class FavoriteRecipeView(APIView):
         recipe = get_object_or_404(Recipe, pk=id)
         if FavoriteRecipe.objects.filter(user=request.user, recipe=recipe).exists():
             return Response(
-                {"detail": "Рецепт уже находится в избранном."},
+                {'detail': 'Рецепт уже находится в избранном.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         FavoriteRecipe.objects.create(user=request.user, recipe=recipe)
         data = {
-            "id": recipe.id,
-            "name": recipe.name,
-            "image": request.build_absolute_uri(recipe.image.url),
-            "cooking_time": recipe.cooking_time,
+            'id': recipe.id,
+            'name': recipe.name,
+            'image': request.build_absolute_uri(recipe.image.url),
+            'cooking_time': recipe.cooking_time,
         }
         return Response(data, status=status.HTTP_201_CREATED)
 
@@ -155,7 +155,7 @@ class FavoriteRecipeView(APIView):
             user=request.user, recipe=recipe).first()
         if not favorite:
             return Response(
-                {"detail": "Рецепт отсутствует в избранном."},
+                {'detail': 'Рецепт отсутствует в избранном.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         favorite.delete()
@@ -170,16 +170,16 @@ class ShoppingCartView(APIView):
 
         if ShoppingCart.objects.filter(user=request.user, recipe=recipe).exists():
             return Response(
-                {"detail": "Рецепт уже находится в списке покупок."},
+                {'detail': 'Рецепт уже находится в списке покупок.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         ShoppingCart.objects.create(user=request.user, recipe=recipe)
         data = {
-            "id": recipe.id,
-            "name": recipe.name,
-            "image": request.build_absolute_uri(recipe.image.url),
-            "cooking_time": recipe.cooking_time,
+            'id': recipe.id,
+            'name': recipe.name,
+            'image': request.build_absolute_uri(recipe.image.url),
+            'cooking_time': recipe.cooking_time,
         }
         return Response(data, status=status.HTTP_201_CREATED)
 
@@ -190,7 +190,7 @@ class ShoppingCartView(APIView):
 
         if not cart_item:
             return Response(
-                {"detail": "Рецепт отсутствует в списке покупок."},
+                {'detail': 'Рецепт отсутствует в списке покупок.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -213,16 +213,16 @@ class ShoppingListDownloadView(APIView):
         shopping_cart = ShoppingCart.objects.filter(user=request.user)
         if not shopping_cart.exists():
             return Response(
-                {"detail": "Список покупок пуст."},
+                {'detail': 'Список покупок пуст.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        shopping_list = "Список покупок:\n\n"
+        shopping_list = 'Список покупок:\n\n'
         for item in shopping_cart:
             recipe = item.recipe
             shopping_list += (
-                f"- {recipe.name} (время приготовления: "
-                f"{recipe.cooking_time} мин.)\n"
+                f'- {recipe.name} (время приготовления: '
+                f'{recipe.cooking_time} мин.)\n'
             )
 
         buffer = BytesIO()
@@ -241,7 +241,7 @@ class RecipeShortLinkView(views.APIView):
 
     def get(self, request, recipe_id):
         get_object_or_404(Recipe, id=recipe_id)
-        short_link = f"{settings.SITE_DOMAIN}/recipes/{recipe_id}/"
+        short_link = f'{settings.SITE_DOMAIN}/recipes/{recipe_id}/'
         return Response({"short_link": short_link}, status=status.HTTP_200_OK)
 
 
@@ -252,11 +252,11 @@ class RecipeDeleteView(views.APIView):
         recipe = get_object_or_404(Recipe, id=recipe_id)
         if recipe.author != request.user:
             return Response(
-                {"detail": "Вы не можете удалить чужой рецепт."},
+                {'detail': 'Вы не можете удалить чужой рецепт.'},
                 status=status.HTTP_403_FORBIDDEN
             )
         recipe.delete()
         return Response(
-            {"detail": "Рецепт успешно удалён."},
+            {'detail': 'Рецепт успешно удалён.'},
             status=status.HTTP_204_NO_CONTENT
         )

@@ -68,7 +68,7 @@ class AvatarUpdateView(views.APIView):
 
     def put(self, request):
         if 'avatar' not in request.data:
-            raise ValidationError({"avatar": "Поле 'avatar' обязательно."})
+            raise ValidationError({'avatar': 'Поле "avatar" обязательно.'})
 
         serializer = AvatarSerializer(
             request.user, data=request.data, partial=True)
@@ -92,7 +92,7 @@ class PasswordResetView(views.APIView):
         if serializer.is_valid():
             serializer.save()
             return Response(
-                {"detail": "Пароль успешно изменен."},
+                {'detail': 'Пароль успешно изменен.'},
                 status=status.HTTP_204_NO_CONTENT
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -104,13 +104,13 @@ class SubscriptionListView(APIView):
     def get(self, request):
         subscriptions = Subscription.objects.filter(user=request.user)
         paginator = PageNumberPagination()
-        paginator.page_size = request.query_params.get("limit", 10)
+        paginator.page_size = request.query_params.get('limit', 10)
         paginated_subscriptions = paginator.paginate_queryset(
             subscriptions, request)
 
         results = [
             SubscriptionSerializer(subscription, context={
-                                   "request": request}).data
+                                   'request': request}).data
             for subscription in paginated_subscriptions
         ]
         return paginator.get_paginated_response(results)
@@ -124,7 +124,7 @@ class SubscribeView(APIView):
 
         if author == request.user:
             return Response(
-                {"detail": "Нельзя подписаться на самого себя."},
+                {'detail': 'Нельзя подписаться на самого себя.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -132,7 +132,7 @@ class SubscribeView(APIView):
             user=request.user, author=author
         ).exists():
             return Response(
-                {"detail": "Вы уже подписаны на этого пользователя."},
+                {'detail': 'Вы уже подписаны на этого пользователя.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -140,7 +140,7 @@ class SubscribeView(APIView):
             user=request.user, author=author)
         return Response(
             SubscriptionSerializer(subscription, context={
-                                   "request": request}).data,
+                                   'request': request}).data,
             status=status.HTTP_201_CREATED,
         )
 
@@ -151,7 +151,7 @@ class SubscribeView(APIView):
 
         if not subscription:
             return Response(
-                {"detail": "Вы не подписаны на этого пользователя."},
+                {'detail': 'Вы не подписаны на этого пользователя.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

@@ -9,8 +9,8 @@ class RecipeIngredientInline(admin.TabularInline):
     model = RecipeIngredient
     extra = 1
     min_num = 1
-    verbose_name = "Ингредиент в рецепте"
-    verbose_name_plural = "Ингредиенты в рецепте"
+    verbose_name = 'Ингредиент в рецепте'
+    verbose_name_plural = 'Ингредиенты в рецепте'
 
 
 @admin.register(Tag)

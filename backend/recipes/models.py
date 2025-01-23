@@ -5,7 +5,7 @@ from django.conf import settings
 class Tag(models.Model):
     name = models.CharField(max_length=50, unique=True)
     color = models.CharField(
-        max_length=7, help_text="Цвет в формате HEX (#RRGGBB)")
+        max_length=7, help_text='Цвет в формате HEX (#RRGGBB)')
     slug = models.SlugField(max_length=50, unique=True)
 
     def __str__(self):
@@ -35,9 +35,9 @@ class Recipe(models.Model):
         related_name='recipes'
     )
     cooking_time = models.PositiveIntegerField(
-        help_text="Укажите время в минутах")
+        help_text='Укажите время в минутах')
     created_at = models.DateTimeField(auto_now_add=True)
-    tags = models.ManyToManyField(Tag, related_name="recipes")
+    tags = models.ManyToManyField(Tag, related_name='recipes')
 
     def __str__(self):
         return self.title
@@ -80,4 +80,4 @@ class ShoppingCart(models.Model):
         verbose_name_plural = 'Списки покупок'
 
     def __str__(self):
-        return f"{self.user} - {self.recipe}"
+        return f'{self.user} - {self.recipe}'

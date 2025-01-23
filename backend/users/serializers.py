@@ -26,7 +26,7 @@ class AvatarSerializer(serializers.ModelSerializer):
 
     def validate_avatar(self, value):
         if not value:
-            raise serializers.ValidationError("Поле 'avatar' обязательно.")
+            raise serializers.ValidationError('Поле "avatar" обязательно.')
         return value
 
 
@@ -63,8 +63,8 @@ class UserSerializer(serializers.ModelSerializer):
 username_validator = RegexValidator(
     regex=r'^[a-zA-Z0-9@.+-_]+$',
     message=(
-        "Имя пользователя может содержать только буквы, "
-        "цифры и символы @/./+/-/_"
+        'Имя пользователя может содержать только буквы, '
+        'цифры и символы @/./+/-/_'
     )
 )
 
@@ -94,20 +94,20 @@ class RegisterUserSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         for field, value in attrs.items():
-            if isinstance(value, str) and value.strip() == "":
+            if isinstance(value, str) and value.strip() == '':
                 raise serializers.ValidationError(
-                    {field: "Это поле не может быть пустым."})
+                    {field: 'Это поле не может быть пустым.'})
         return attrs
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("Этот email уже используется.")
+            raise serializers.ValidationError('Этот email уже используется.')
         return value
 
     def validate_username(self, value):
         if User.objects.filter(username=value).exists():
             raise serializers.ValidationError(
-                "Этот username уже используется.")
+                'Этот username уже используется.')
         return value
 
     def create(self, validated_data):
@@ -122,13 +122,13 @@ class PasswordResetSerializer(serializers.Serializer):
     def validate_current_password(self, value):
         user = self.context['request'].user
         if not user.check_password(value):
-            raise serializers.ValidationError("Неверный текущий пароль.")
+            raise serializers.ValidationError('Неверный текущий пароль.')
         return value
 
     def validate_new_password(self, value):
         if len(value) < 8:
             raise serializers.ValidationError(
-                "Пароль должен быть не менее 8 символов.")
+                'Пароль должен быть не менее 8 символов.')
         return value
 
     def save(self, **kwargs):
@@ -145,16 +145,16 @@ class RecipeMinifiedSerializer(serializers.ModelSerializer):
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField(source="author.email")
-    id = serializers.IntegerField(source="author.id")
-    username = serializers.CharField(source="author.username")
-    first_name = serializers.CharField(source="author.first_name")
-    last_name = serializers.CharField(source="author.last_name")
+    email = serializers.EmailField(source='author.email')
+    id = serializers.IntegerField(source='author.id')
+    username = serializers.CharField(source='author.username')
+    first_name = serializers.CharField(source='author.first_name')
+    last_name = serializers.CharField(source='author.last_name')
     is_subscribed = serializers.SerializerMethodField()
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
     avatar = serializers.ImageField(
-        source="author.profile.avatar", read_only=True)
+        source='author.profile.avatar', read_only=True)
 
     class Meta:
         model = Subscription
@@ -167,7 +167,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         return True
 
     def get_recipes(self, obj):
-        limit = self.context["request"].query_params.get("recipes_limit")
+        limit = self.context['request'].query_params.get('recipes_limit')
         recipes = obj.author.recipes.all()
         if limit:
             recipes = recipes[:int(limit)]

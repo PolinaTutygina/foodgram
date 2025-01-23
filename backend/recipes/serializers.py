@@ -47,13 +47,13 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def get_author(self, obj):
         return {
-            "id": obj.author.id,
-            "email": obj.author.email,
-            "username": obj.author.username,
-            "first_name": obj.author.first_name,
-            "last_name": obj.author.last_name,
-            "is_subscribed": obj.author.is_subscribed,
-            "avatar": obj.author.avatar.url if obj.author.avatar else None
+            'id': obj.author.id,
+            'email': obj.author.email,
+            'username': obj.author.username,
+            'first_name': obj.author.first_name,
+            'last_name': obj.author.last_name,
+            'is_subscribed': obj.author.is_subscribed,
+            'avatar': obj.author.avatar.url if obj.author.avatar else None
         }
 
     class Meta:
@@ -88,13 +88,13 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
     def validate_ingredients(self, value):
         if not value:
             raise serializers.ValidationError(
-                "Рецепт должен содержать хотя бы один ингредиент.")
+                'Рецепт должен содержать хотя бы один ингредиент.')
         return value
 
     def validate_cooking_time(self, value):
         if value < 1:
             raise serializers.ValidationError(
-                "Время приготовления должно быть не меньше 1 минуты.")
+                'Время приготовления должно быть не меньше 1 минуты.')
         return value
 
 

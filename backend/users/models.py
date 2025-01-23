@@ -4,7 +4,7 @@ from django.conf import settings
 
 
 class User(AbstractUser):
-    avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     subscriptions = models.ManyToManyField(
         'self', symmetrical=False, related_name='subscribers', blank=True
     )
@@ -27,18 +27,18 @@ class Subscription(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="following",
+        related_name='following',
     )
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="followers",
+        related_name='followers',
     )
 
     class Meta:
         unique_together = ('user', 'author')
-        verbose_name = "Подписка"
-        verbose_name_plural = "Подписки"
+        verbose_name = 'Подписка'
+        verbose_name_plural = 'Подписки'
 
     def __str__(self):
-        return f"{self.user} подписан на {self.author}"
+        return f'{self.user} подписан на {self.author}'
