@@ -7,7 +7,7 @@ class Command(BaseCommand):
     help = 'Загружает ингредиенты из JSON файла в базу данных'
 
     def handle(self, *args, **kwargs):
-        file_path = os.path.join('backend', 'ingredients.json')
+        file_path = 'ingredients.json'
 
         if not os.path.exists(file_path):
             self.stderr.write(f'Файл {file_path} не найден.')

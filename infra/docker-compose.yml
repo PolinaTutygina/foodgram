@@ -1,5 +1,3 @@
-version: '3.3'
-
 services:
   db:    
     image: postgres:13.10 
@@ -17,7 +15,8 @@ services:
     restart: always    
     volumes:    
       - static_value:/app/static/      
-      - media_value:/app/media/   
+      - media_value:/app/media/
+      - ../backend/ingredients.json:/app/ingredients.json
     ports:
       - "8000:8000"
     depends_on:
