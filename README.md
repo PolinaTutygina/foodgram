@@ -1,7 +1,31 @@
-Находясь в папке infra, выполните команду docker-compose up. При выполнении этой команды контейнер frontend, описанный в docker-compose.yml, подготовит файлы, необходимые для работы фронтенд-приложения, а затем прекратит свою работу.
-
-По адресу http://localhost изучите фронтенд веб-приложения, а по адресу http://localhost/api/docs/ — спецификацию API.
-
-Foodgram - сайт для размещения рецептов.
-
-Foodgram - сайт для размещения рецептов.
+# Foodgram
+«Фудграм» — сайт, на котором пользователи будут публиковать свои рецепты, добавлять чужие рецепты в избранное и подписываться на публикации других авторов.
+## Как запустить проект
+1. Клонируйте репозиторий к себе на компьютер:
+```bash
+git clone git@github.com:PolinaTutygina/foodgram.git
+```
+2. Создайте файл `.env` в директории `infra` на основе `.env.example`:
+```bash
+cp infra/.env.example infra/.env
+```
+3. В директории `infra` запустите проект:
+```bash
+docker compose up -d
+```
+4. Выполните миграции:
+```bash
+docker compose exec backend python manage.py migrate
+```
+5. Заполните базу ингредиентами:
+```bash
+docker compose exec backend python manage.py download_ingredients
+```
+6. Создайте суперпользователя:
+```bash
+docker compose run --rm backend python manage.py createsuperuser
+```
+## Доступные адреса
+ - [Интерфейс веб-приложения](http://localhost)
+ - [Спецификация API](http://localhost/api/docs/)
+ - [Админ-панель](http://localhost/admin/)
