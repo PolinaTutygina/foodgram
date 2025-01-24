@@ -21,7 +21,11 @@ docker compose exec backend python manage.py migrate
 ```bash
 docker compose exec backend python manage.py download_ingredients
 ```
-6. Создайте суперпользователя:
+6. Соберите статику:
+```bash
+docker compose exec backend python manage.py collectstatic --noinput
+```
+7. Создайте суперпользователя:
 ```bash
 docker compose run --rm backend python manage.py createsuperuser
 ```
