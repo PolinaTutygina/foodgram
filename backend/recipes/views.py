@@ -3,7 +3,6 @@ from rest_framework.generics import RetrieveAPIView
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from io import BytesIO
-from rest_framework.generics import ListAPIView
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
