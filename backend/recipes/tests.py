@@ -2,7 +2,6 @@ from django.test import TestCase
 from recipes.models import (
     Recipe,
     Ingredient,
-    Tag,
     RecipeIngredient,
 )
 from users.models import User
@@ -18,11 +17,6 @@ class RecipeModelTest(TestCase):
             name='Sugar',
             measurement_unit='grams',
         )
-        self.tag = Tag.objects.create(
-            name='Dessert',
-            color='#FFFFFF',
-            slug='dessert',
-        )
         self.recipe = Recipe.objects.create(
             author=self.user,
             title='Cake',
@@ -35,7 +29,6 @@ class RecipeModelTest(TestCase):
             ingredient=self.ingredient,
             amount=100,
         )
-        self.recipe.tags.add(self.tag)
 
     def test_recipe_creation(self):
         """Тест создания рецепта."""
@@ -53,9 +46,3 @@ class RecipeModelTest(TestCase):
             ingredient=self.ingredient,
         )
         self.assertEqual(recipe_ingredient.amount, 100)
-
-    def test_tag_association(self):
-        """Тест связи рецепта с тегом."""
-        self.assertTrue(
-            self.recipe.tags.filter(name='Dessert').exists()
-        )

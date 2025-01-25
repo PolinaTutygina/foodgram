@@ -11,11 +11,11 @@ class UserAdmin(admin.ModelAdmin):
     filter_horizontal = ('groups', 'user_permissions')
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        ('Personal info', {
+        ('Личные данные', {
          'fields': ('first_name', 'last_name', 'email', 'avatar')}),
-        ('Permissions', {'fields': ('is_active', 'is_staff',
+        ('Права доступа', {'fields': ('is_active', 'is_staff',
          'is_superuser', 'groups', 'user_permissions')}),
-        ('Important dates', {'fields': ('last_login', 'date_joined')}),
+        ('Важные даты', {'fields': ('last_login', 'date_joined')}),
     )
     ordering = ('username',)
 

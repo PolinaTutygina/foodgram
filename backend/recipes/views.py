@@ -1,6 +1,7 @@
 from rest_framework import generics, views, status
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet
 from io import BytesIO
 from rest_framework.generics import ListAPIView
 from django.http import HttpResponse
@@ -11,31 +12,24 @@ from rest_framework.permissions import (IsAuthenticatedOrReadOnly,
                                         IsAuthenticated)
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-
-from .models import (Ingredient, Recipe, FavoriteRecipe, Tag, ShoppingCart)
+from .filters import RecipeFilter
+from .models import (Ingredient, Recipe, FavoriteRecipe, ShoppingCart)
 from .serializers import (IngredientSerializer, RecipeSerializer,
-                          CreateRecipeSerializer, TagSerializer,
-                          ShoppingCartSerializer, )
+                          CreateRecipeSerializer, ShoppingCartSerializer)
 
 
-class TagListView(generics.ListAPIView):
-    queryset = Tag.objects.all()
-    serializer_class = TagSerializer
+class IngredientListView(APIView):
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
+    def get(self, request):
+        name = request.query_params.get('name', '')
+        ingredients = Ingredient.objects.all()
 
-class IngredientListView(ListAPIView):
-    queryset = Ingredient.objects.all()
-    serializer_class = IngredientSerializer
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['name']
-    http_method_names = ['get']
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        name = self.request.query_params.get('name')
         if name:
-            queryset = queryset.filter(name__istartswith=name)
-        return queryset
+            ingredients = ingredients.filter(name__istartswith=name)
+
+        serializer = IngredientSerializer(ingredients, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class IngredientDetailView(RetrieveAPIView):
@@ -44,90 +38,24 @@ class IngredientDetailView(RetrieveAPIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
 
-class RecipeListView(APIView):
+class RecipePagination(PageNumberPagination):
+    page_size = 6
+
+
+class RecipeViewSet(ModelViewSet):
+    queryset = Recipe.objects.all()
     permission_classes = [IsAuthenticatedOrReadOnly]
+    pagination_class = RecipePagination
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = RecipeFilter
 
-    def get(self, request):
-        recipes = Recipe.objects.all()
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return CreateRecipeSerializer
+        return RecipeSerializer
 
-        author = request.query_params.get('author')
-        is_favorited = request.query_params.get('is_favorited')
-        is_in_shopping_cart = request.query_params.get('is_in_shopping_cart')
-        search_name = request.query_params.get('search')
-
-        if author:
-            recipes = recipes.filter(author_id=author)
-        if is_favorited:
-            recipes = recipes.filter(favorite_recipes__user=request.user)
-        if is_in_shopping_cart:
-            recipes = recipes.filter(shopping_cart__user=request.user)
-        if search_name:
-            recipes = recipes.filter(name__icontains=search_name)
-
-        paginator = PageNumberPagination()
-        paginated_recipes = paginator.paginate_queryset(recipes, request)
-        serializer = RecipeSerializer(paginated_recipes, many=True)
-        return paginator.get_paginated_response(serializer.data)
-
-    def post(self, request):
-        serializer = CreateRecipeSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(author=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class RecipeDetailView(APIView):
-    permission_classes = [IsAuthenticatedOrReadOnly]
-
-    def get(self, request, pk):
-        recipe = get_object_or_404(Recipe, pk=pk)
-        serializer = RecipeSerializer(recipe)
-        return Response(serializer.data)
-
-    def patch(self, request, id):
-        recipe = get_object_or_404(Recipe, pk=id)
-
-        if recipe.author != request.user:
-            return Response(
-                {'detail': 'У вас недостаточно прав для выполнения действия.'},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        serializer = CreateRecipeSerializer(
-            recipe, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def put(self, request, pk):
-        recipe = get_object_or_404(Recipe, pk=pk)
-
-        if recipe.author != request.user:
-            return Response(
-                {'detail': 'У вас нет прав на изменение этого рецепта.'},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        serializer = CreateRecipeSerializer(recipe, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, pk):
-        recipe = get_object_or_404(Recipe, pk=pk)
-
-        if recipe.author != request.user:
-            return Response(
-                {'detail': 'У вас нет прав на удаление этого рецепта.'},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        recipe.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
 
 
 class FavoriteRecipeView(APIView):
