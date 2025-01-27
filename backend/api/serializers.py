@@ -7,8 +7,6 @@ from recipes.models import (
     FavoriteRecipe, ShoppingCart
 )
 
-User = get_user_model()
-
 
 MIN_COOKING_TIME = 1
 MIN_AMOUNT = 1

@@ -9,7 +9,6 @@ from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework.permissions import (IsAuthenticatedOrReadOnly)
 from rest_framework.filters import SearchFilter
 from django.http import HttpResponse
-from io import BytesIO
 from django_filters.rest_framework import DjangoFilterBackend
 
 from recipes.models import (Ingredient, Recipe, FavoriteRecipe, ShoppingCart,
@@ -20,8 +19,6 @@ from .serializers import (
 )
 from .filters import RecipeFilter
 from .pagination import LimitPagination
-
-User = get_user_model()
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
