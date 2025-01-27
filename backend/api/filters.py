@@ -1,5 +1,5 @@
 import django_filters
-from .models import Recipe
+from recipes.models import Recipe
 
 class RecipeFilter(django_filters.FilterSet):
     is_favorited = django_filters.BooleanFilter(method='filter_is_favorited')
