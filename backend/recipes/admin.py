@@ -48,10 +48,9 @@ class UserAdmin(BaseUserAdmin):
     @admin.display(description='Аватар')
     @mark_safe
     def avatar_display(self, user):
-        if user.avatar:
-            return (f'<img src="{user.avatar.url}" alt="Avatar" '
-                     'style="width: 50px; height: 50px; border-radius: 50%;">')
-        return 'Нет аватара'
+        return (f'<img src="{user.avatar.url}" alt="Avatar" '
+                'style="width: 50px; height: 50px; border-radius: 50%;">'
+                if user.avatar else '')
 
     @admin.display(description='Рецепты')
     def recipes_count(self, user):
@@ -83,7 +82,7 @@ class RecipeIngredientInline(admin.TabularInline):
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'measurement_unit')
-    search_fields = ('name',)
+    search_fields = ('name', 'measurement_unit')
     list_filter = ('measurement_unit',)
 
 
@@ -92,33 +91,48 @@ class CookingTimeFilter(admin.SimpleListFilter):
     parameter_name = 'cooking_time_category'
 
     def lookups(self, request, model_admin):
-        times = list(Recipe.objects.values_list('cooking_time', flat=True))
-        if not times:
+        cooking_times = list(
+            Recipe.objects.values_list('cooking_time', flat=True)
+        )
+        if not cooking_times:
             return []
 
-        times.sort()
-        third = len(times) // 3
-        N = times[third] if third > 0 else min(times, default=10)
-        M = times[2 * third] if 2 * third > third else max(times, default=30)
+        cooking_times.sort()
+        one_third = len(cooking_times) // 3
+        self.lower_bound = (cooking_times[one_third] 
+                            if one_third > 0 
+                            else min(cooking_times, default=10))
 
-        fast_count = Recipe.objects.filter(cooking_time__lt=N).count()
-        medium_count = Recipe.objects.filter(cooking_time__range=(N, M)).count()
-        long_count = Recipe.objects.filter(cooking_time__gt=M).count()
+        self.upper_bound = (cooking_times[2 * one_third] 
+                            if 2 * one_third > one_third 
+                            else max(cooking_times, default=30))
+
+        fast_count = Recipe.objects.filter(
+            cooking_time__lt=self.lower_bound
+        ).count()
+        medium_count = Recipe.objects.filter(
+            cooking_time__range=(self.lower_bound, self.upper_bound)
+        ).count()
+        long_count = Recipe.objects.filter(
+            cooking_time__gt=self.upper_bound
+        ).count()
 
         return [
-            ('fast', f'Быстрее {N} мин ({fast_count})'),
-            ('medium', f'От {N} до {M} мин ({medium_count})'),
-            ('long', f'Дольше {M} мин ({long_count})'),
+            ('fast', f'Быстрее {self.lower_bound} мин ({fast_count})'),
+            ('medium', (f'От {self.lower_bound} до {self.upper_bound} '
+                        'мин ({medium_count})')),
+            ('long', f'Дольше {self.upper_bound} мин ({long_count})'),
         ]
 
     def queryset(self, request, queryset):
-        value = self.value()
-        if value == 'fast':
-            return queryset.filter(cooking_time__lt=self.N)
-        elif value == 'medium':
-            return queryset.filter(cooking_time__range=(self.N, self.M))
-        elif value == 'long':
-            return queryset.filter(cooking_time__gt=self.M)
+        if self.value() == 'fast':
+            return queryset.filter(cooking_time__lt=self.lower_bound)
+        elif self.value() == 'medium':
+            return queryset.filter(
+                cooking_time__range=(self.lower_bound, self.upper_bound)
+            )
+        elif self.value() == 'long':
+            return queryset.filter(cooking_time__gt=self.upper_bound)
         return queryset
 
 
@@ -136,27 +150,27 @@ class RecipeAdmin(admin.ModelAdmin):
     @admin.display(description='Ингредиенты')
     @mark_safe
     def display_ingredients(self, recipe):
-        ingredients = recipe.ingredients.all()
-        return (
-            '<ul>' + ''.join(
-                f'<li>{ingredient.name} ({ingredient.measurement_unit})</li>'
-                for ingredient in ingredients
-            ) + '</ul>'
-        ) if ingredients else 'Нет ингредиентов'
+        return '<br>'.join(
+        f'{recipe_ingredient.ingredient.name} — '
+        f'{recipe_ingredient.amount} '
+        f'{recipe_ingredient.ingredient.measurement_unit}'
+        for recipe_ingredient in recipe.recipeingredient_set.all()
+    )
 
     @admin.display(description='Картинка')
     @mark_safe
     def display_image(self, recipe):
-        if recipe.image:
-            return (
-                f'<img src="{recipe.image.url}" width="100" height="100" '
-                'style="object-fit: cover; border-radius: 8px;">'
-            )
-        return 'Нет изображения'
+        return (
+            f'<img src="{recipe.image.url}" width="100" height="100" '
+            'style="object-fit: cover; border-radius: 8px;">'
+            if recipe.image else ''
+        )
 
     @admin.display(description='В избранном')
     def favorite_count(self, recipe):
-        return recipe.favorite_set.count()
+        return recipe.user_recipe_relations.filter(
+            favoriterecipe__isnull=False
+        ).count()
 
 
 @admin.register(RecipeIngredient)

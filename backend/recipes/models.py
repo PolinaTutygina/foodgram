@@ -15,13 +15,13 @@ class User(AbstractUser):
         unique=True
     )
     username = models.CharField(
-        'Имя пользователя',
+        'Логин',
         max_length=150,
         unique=True,
         validators=[
             RegexValidator(
                 regex=r'^[\w.@+-]+$',
-                message=('Имя пользователя может содержать только буквы, '
+                message=('Логин может содержать только буквы, '
                          'цифры и символы @/./+/-/_'
                 )
             )
@@ -158,11 +158,13 @@ class UserRecipeRelation(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        verbose_name='Пользователь'
+        related_name='%(class)ss',
+        verbose_name='Пользователь',
     )
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
+        related_name='%(class)ss',
         verbose_name='Рецепт'
     )
 
@@ -171,7 +173,7 @@ class UserRecipeRelation(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'recipe'],
-                name='unique_user_recipe'
+                name='unique_%(class)s_user_recipe',
             )
         ]
 
@@ -180,12 +182,12 @@ class UserRecipeRelation(models.Model):
 
 
 class FavoriteRecipe(UserRecipeRelation):
-    class Meta:
+    class Meta(UserRecipeRelation.Meta):
         verbose_name = 'Избранный рецепт'
         verbose_name_plural = 'Избранные рецепты'
 
 
 class ShoppingCart(UserRecipeRelation):
-    class Meta:
+    class Meta(UserRecipeRelation.Meta):
         verbose_name = 'Список покупок'
         verbose_name_plural = 'Списки покупок'

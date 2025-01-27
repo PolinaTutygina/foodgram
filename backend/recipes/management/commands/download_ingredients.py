@@ -6,23 +6,17 @@ class Command(BaseCommand):
     help = 'Загружает ингредиенты из JSON файла в базу данных'
 
     def handle(self, *args, **kwargs):
-        file_path = 'ingredients.json'
-
         try:
-            with open(file_path, 'r', encoding='utf-8') as file:
-                data = json.load(file)
-        except json.JSONDecodeError as e: 
-            self.stderr.write(f'Ошибка чтения JSON файла: {e}')
-            return
+            with open('ingredients.json', 'r', encoding='utf-8') as file:
+                created_ingredients = Ingredient.objects.bulk_create(
+                    [Ingredient(**item) for item in json.load(file)],
+                    ignore_conflicts=True
+                )
 
-        ingredients = [Ingredient(**item) for item in data]
-        created_ingredients = Ingredient.objects.bulk_create(
-            ingredients,
-            ignore_conflicts=True
-        )
-
-        self.stdout.write(
-            self.style.SUCCESS(
-                f'Успешно добавлено {len(created_ingredients)} ингредиентов.'
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f'Успешно добавлено {len(created_ingredients)} ингредиентов.'
+                )
             )
-        )
+        except:
+            self.stderr.write(f'Произошла ошибка!')
