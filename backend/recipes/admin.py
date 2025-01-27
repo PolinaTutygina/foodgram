@@ -120,7 +120,7 @@ class CookingTimeFilter(admin.SimpleListFilter):
         return [
             ('fast', f'Быстрее {self.lower_bound} мин ({fast_count})'),
             ('medium', (f'От {self.lower_bound} до {self.upper_bound} '
-                        'мин ({medium_count})')),
+                        f'мин ({medium_count})')),
             ('long', f'Дольше {self.upper_bound} мин ({long_count})'),
         ]
 

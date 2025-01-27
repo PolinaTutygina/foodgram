@@ -18,5 +18,5 @@ class Command(BaseCommand):
                     f'Успешно добавлено {len(created_ingredients)} ингредиентов.'
                 )
             )
-        except:
-            self.stderr.write(f'Произошла ошибка!')
+        except Exception as e:
+            self.stderr.write(f'Произошла ошибка: {e}')
