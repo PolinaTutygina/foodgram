@@ -5,27 +5,31 @@
 ```bash
 git clone git@github.com:PolinaTutygina/foodgram.git
 ```
-2. Создайте файл `.env` в директории `infra` на основе `.env.example`:
+2. Перейдите в директорию infra:
 ```bash
-cp infra/.env.example infra/.env
+cd foodgram/infra
 ```
-3. В директории `infra` запустите проект:
+3. Создайте файл `.env` в директории `infra` на основе `.env.example`:
+```bash
+cp .env.example .env
+```
+4. В директории `infra` запустите проект:
 ```bash
 docker compose up -d
 ```
-4. Выполните миграции:
+5. Выполните миграции:
 ```bash
 docker compose exec backend python manage.py migrate
 ```
-5. Заполните базу ингредиентами:
+6. Заполните базу ингредиентами:
 ```bash
 docker compose exec backend python manage.py download_ingredients
 ```
-6. Соберите статику:
+7. Соберите статику:
 ```bash
 docker compose exec backend python manage.py collectstatic --noinput
 ```
-7. Создайте суперпользователя:
+8. Создайте суперпользователя:
 ```bash
 docker compose run --rm backend python manage.py createsuperuser
 ```

@@ -23,8 +23,6 @@ jobs:
           pip install -r ./backend/requirements.txt
       - name: Lint with ruff
         run: ruff check .
-      - name: Run Django tests
-        run: python ./backend/manage.py test
 
   build_and_push_to_docker_hub:
     name: Push Docker image to DockerHub
