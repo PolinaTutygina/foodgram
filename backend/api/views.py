@@ -6,23 +6,23 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet as DjoserUserViewSet
-from rest_framework.permissions import (IsAuthenticatedOrReadOnly,
-                                        IsAuthenticated)
+from rest_framework.permissions import (IsAuthenticatedOrReadOnly)
 from rest_framework.filters import SearchFilter
-from django.urls import reverse
 from django.http import HttpResponse
 from io import BytesIO
 from django_filters.rest_framework import DjangoFilterBackend
 
 from recipes.models import (Ingredient, Recipe, FavoriteRecipe, ShoppingCart,
                             User, Subscription)
-from recipes.serializers import (
-    IngredientSerializer, RecipeSerializer,
-    CreateRecipeSerializer, ShoppingCartSerializer,
-    UserSerializer, AvatarSerializer, SubscriptionSerializer
+from .serializers import (
+    IngredientSerializer, RecipeIngredientSerializer, RecipeSerializer,
+    AuthorSubscriptionSerializer, UpdateRecipeSerializer, UserSerializer
 )
 from .filters import RecipeFilter
 from .pagination import LimitPagination
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):

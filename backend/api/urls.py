@@ -4,8 +4,8 @@ from .views import IngredientViewSet, RecipeViewSet, UserViewSet
 from recipes.views import recipe_redirect_view
 
 router = DefaultRouter()
-router.register(r'ingredients', IngredientViewSet, basename='ingredient')
-router.register(r'recipes', RecipeViewSet, basename='recipe')
+router.register(r'ingredients', IngredientViewSet, basename='ingredients')
+router.register(r'recipes', RecipeViewSet, basename='recipes')
 router.register(r'users', UserViewSet, basename='users')
 
 urlpatterns = [

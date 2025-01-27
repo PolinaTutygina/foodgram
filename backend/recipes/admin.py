@@ -87,14 +87,49 @@ class IngredientAdmin(admin.ModelAdmin):
     list_filter = ('measurement_unit',)
 
 
+class CookingTimeFilter(admin.SimpleListFilter):
+    title = 'Время готовки'
+    parameter_name = 'cooking_time_category'
+
+    def lookups(self, request, model_admin):
+        times = list(Recipe.objects.values_list('cooking_time', flat=True))
+        if not times:
+            return []
+
+        times.sort()
+        third = len(times) // 3
+        N = times[third] if third > 0 else min(times, default=10)
+        M = times[2 * third] if 2 * third > third else max(times, default=30)
+
+        fast_count = Recipe.objects.filter(cooking_time__lt=N).count()
+        medium_count = Recipe.objects.filter(cooking_time__range=(N, M)).count()
+        long_count = Recipe.objects.filter(cooking_time__gt=M).count()
+
+        return [
+            ('fast', f'Быстрее {N} мин ({fast_count})'),
+            ('medium', f'От {N} до {M} мин ({medium_count})'),
+            ('long', f'Дольше {M} мин ({long_count})'),
+        ]
+
+    def queryset(self, request, queryset):
+        value = self.value()
+        if value == 'fast':
+            return queryset.filter(cooking_time__lt=self.N)
+        elif value == 'medium':
+            return queryset.filter(cooking_time__range=(self.N, self.M))
+        elif value == 'long':
+            return queryset.filter(cooking_time__gt=self.M)
+        return queryset
+
+
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'title', 'cooking_time', 'author', 
+        'id', 'name', 'cooking_time', 'author', 
         'favorite_count', 'display_ingredients', 'display_image'
     )
-    search_fields = ('title', 'author__username', 'author__email')
-    list_filter = ('cooking_time', 'author')
+    search_fields = ('name', 'author__username', 'author__email')
+    list_filter = (CookingTimeFilter, 'author')
     inlines = (RecipeIngredientInline,)
     readonly_fields = ('favorite_count',)
 

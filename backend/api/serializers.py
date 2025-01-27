@@ -1,12 +1,14 @@
 from drf_extra_fields.fields import Base64ImageField
-from django.core.files.base import ContentFile
 from rest_framework import serializers
-from django.core.validators import MinValueValidator, RegexValidator
-from djoser.serializers import UserSerializer as DjoserUserSerializer, UserCreateSerializer
+from django.core.validators import MinValueValidator
+from djoser.serializers import UserSerializer as DjoserUserSerializer
 from recipes.models import (
-    Ingredient, Recipe, RecipeIngredient, FavoriteRecipe,
-    ShoppingCart, Subscription, User
+    Ingredient, Recipe, RecipeIngredient,
+    FavoriteRecipe, ShoppingCart
 )
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 MIN_COOKING_TIME = 1
@@ -127,7 +129,7 @@ class UserSerializer(DjoserUserSerializer):
 
     class Meta(DjoserUserSerializer.Meta):
         model = User
-        fields = DjoserUserSerializer.Meta.fields + ['avatar']
+        fields = DjoserUserSerializer.Meta.fields + ('avatar',)
 
 
 class RecipeMinifiedSerializer(serializers.ModelSerializer):
