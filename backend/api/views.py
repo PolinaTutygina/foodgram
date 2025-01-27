@@ -15,12 +15,11 @@ from django_filters.rest_framework import DjangoFilterBackend
 from recipes.models import (Ingredient, Recipe, FavoriteRecipe, ShoppingCart,
                             User, Subscription)
 from .serializers import (
-    IngredientSerializer, RecipeIngredientSerializer, RecipeSerializer,
-    AuthorSubscriptionSerializer, UpdateRecipeSerializer, UserSerializer
+    IngredientSerializer, RecipeSerializer, UserSerializer,
+    UpdateRecipeSerializer, AvatarSerializer, AuthorSubscriptionSerializer
 )
 from .filters import RecipeFilter
 from .pagination import LimitPagination
-from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
@@ -42,7 +41,7 @@ class RecipeViewSet(ModelViewSet):
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
-            return CreateRecipeSerializer
+            return UpdateRecipeSerializer
         return RecipeSerializer
 
     def perform_create(self, serializer):
@@ -110,8 +109,10 @@ class RecipeViewSet(ModelViewSet):
             permission_classes=[IsAuthenticated])
     def list_shopping_cart(self, request):
         cart_items = ShoppingCart.objects.filter(user=request.user)
-        serializer = ShoppingCartSerializer(cart_items, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        recipes = [cart_item.recipe for cart_item in cart_items]
+        serialized_data = RecipeSerializer(
+            recipes, many=True, context={'request': request}).data
+        return Response(serialized_data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'],
             permission_classes=[IsAuthenticated])
@@ -131,13 +132,9 @@ class RecipeViewSet(ModelViewSet):
                 f'{recipe.cooking_time} мин.)\n'
             )
 
-        buffer = BytesIO()
-        buffer.write(shopping_list.encode('utf-8'))
-        buffer.seek(0)
-
-        response = HttpResponse(buffer, content_type='application/pdf')
+        response = HttpResponse(shopping_list, content_type='text/plain')
         response['Content-Disposition'] = (
-            'attachment; filename="shopping_list.pdf"'
+            'attachment; filename="shopping_list.txt"'
         )
         return response
 
@@ -175,7 +172,7 @@ class UserViewSet(DjoserUserViewSet):
         paginated_subscriptions = paginator.paginate_queryset(
             subscriptions, request
         )
-        serializer = SubscriptionSerializer(
+        serializer = AuthorSubscriptionSerializer(
             paginated_subscriptions,
             many=True,
             context={'request': request}
@@ -204,7 +201,7 @@ class UserViewSet(DjoserUserViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         return Response(
-            SubscriptionSerializer(subscription, context={'request': request}).data,
+            AuthorSubscriptionSerializer(subscription, context={'request': request}).data,
             status=status.HTTP_201_CREATED,
         )
 
