@@ -21,7 +21,6 @@ from .serializers import (
 )
 from .filters import RecipeFilter
 from .pagination import LimitPagination
-from .permissions import IsOwner
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
